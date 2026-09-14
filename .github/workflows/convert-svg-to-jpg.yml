@@ -1,0 +1,52 @@
+name: Convert SVG to JPG
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.svg'
+      - '.github/workflows/convert-svg-to-jpg.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install converters
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin imagemagick
+
+      - name: Convert all SVG files to JPG
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for f in *.svg; do
+            out="${f%.svg}.jpg"
+            tmp="$(mktemp --suffix=.png)"
+            rsvg-convert -w 768 -h 768 "$f" -o "$tmp"
+            convert "$tmp" -background white -alpha remove -alpha off -strip -interlace Plane -quality 90 "$out"
+            rm -f "$tmp"
+          done
+
+      - name: Commit JPG files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- '*.jpg'
+          if git diff --cached --quiet; then
+            echo "No JPG changes to commit"
+            exit 0
+          fi
+          git commit -m "Add JPG versions of drink images"
+          git push origin HEAD:main
