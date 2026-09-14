@@ -1,5 +1,7 @@
-from PIL import Image
+from PIL import Image, ImageFile
 from pathlib import Path
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 NAMES = [
     'hot_chocolate.jpg',
